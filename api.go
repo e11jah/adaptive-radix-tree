@@ -2,7 +2,7 @@ package art
 
 type Tree interface {
 	Insert(key Key) bool
-	ForEachKeyPrefix(prefix Key) []Key
+	ForEachKeyPrefix(prefix Key) []string
 	Iterator() Iterator
 	Size() int
 }

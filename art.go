@@ -177,6 +177,10 @@ func (k Key) charAt(pos int) byte {
 	return k[pos]
 }
 
+func (k Key) String() string {
+	return string(k)
+}
+
 func (k Key) valid(pos int) bool {
 	return pos >= 0 && pos < len(k)
 }

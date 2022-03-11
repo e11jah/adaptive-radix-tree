@@ -95,13 +95,13 @@ NEXT_NODE:
 	return true
 }
 
-func (t *tree) ForEachKeyPrefix(prefix Key) []Key {
-	keys := make([]Key, 0)
+func (t *tree) ForEachKeyPrefix(prefix Key) []string {
+	keys := make([]string, 0)
 	t.forEachPrefix(t.root, prefix, func(n Node) bool {
 		if n.Type() != Leaf {
 			return true
 		}
-		keys = append(keys, n.Key())
+		keys = append(keys, n.Key().String())
 		return true
 	})
 	return keys

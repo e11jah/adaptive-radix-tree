@@ -1,10 +1,14 @@
 package art
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/openacid/testkeys"
 )
 
 func TestTreeTraversalPrefix(t *testing.T) {
@@ -80,11 +84,8 @@ func TestTreeTraversalPrefix(t *testing.T) {
 			tree.Insert(Key(k))
 		}
 
-		got := tree.ForEachKeyPrefix(Key(d.keyPrefix))
-		actual := make([]string, 0, len(got))
-		for _, k := range got {
-			actual = append(actual, string(k))
-		}
+		actual := tree.ForEachKeyPrefix(Key(d.keyPrefix))
+
 		sort.Strings(d.expected)
 		sort.Strings(actual)
 		assert.Equal(t, d.expected, actual, d.keyPrefix)
@@ -119,4 +120,91 @@ func TestTreeIterator(t *testing.T) {
 	assert.Nil(t, bad)
 	assert.Equal(t, ErrNoMoreNodes, err)
 
+}
+
+func TestBigKeySetPrefixSearch(t *testing.T) {
+	keys := getKeys("1mvl5_10")
+
+	n := len(keys)
+	fmt.Printf("key len %d\n", n)
+
+	prefixs := make([]string, 0, n/10)
+	tree := New()
+	for _, k := range keys {
+		if strings.HasPrefix(k, "z") {
+			prefixs = append(prefixs, k)
+		}
+		tree.Insert(Key(k))
+	}
+	got := tree.ForEachKeyPrefix(Key("z"))
+	assert.Equal(t, prefixs, got)
+}
+
+var cache map[string][]string = map[string][]string{}
+
+func getKeys(fn string) []string {
+	ss, ok := cache[fn]
+	if ok {
+		return ss
+	}
+	ks := testkeys.Load(fn)
+	cache[fn] = ks
+	return ks
+}
+
+func benchBigKeySet(b *testing.B, f func(b *testing.B, typ string, key []string)) {
+	for _, fn := range testkeys.AssetNames() {
+		keys := getKeys(fn)
+
+		n := len(keys)
+		if n < 1000 {
+			continue
+		}
+
+		b.Run(fn, func(b *testing.B) {
+			f(b, fn, keys)
+		})
+	}
+}
+
+func BenchmarkWordsTreeInsert(b *testing.B) {
+	benchBigKeySet(b, func(b *testing.B, fn string, keys []string) {
+		n := len(keys)
+		b.ResetTimer()
+
+		for i := 0; i < b.N/n; i++ {
+			tree := New()
+
+			for _, k := range keys {
+				tree.Insert(Key(k))
+			}
+		}
+
+	})
+}
+
+func BenchmarkWordsTreePrefixSearch(b *testing.B) {
+	prefixs := []string{
+		"abcdefghijklmnopqrstuvwxyz",
+		"0123456789",
+	}
+
+	benchBigKeySet(b, func (b *testing.B, fn string, keys []string)  {
+		n := len(keys)
+		b.ResetTimer()
+
+		for i := 0; i < b.N/n; i++ {
+			tree := New()
+
+			for _, k := range keys {
+				tree.Insert(Key(k))
+			}
+
+			for _, prefix := range prefixs {
+				for i := 0; i < len(prefix); i++ {
+					tree.ForEachKeyPrefix(Key(prefix[i:i+1]))
+				}
+			}
+		}
+	})
 }
